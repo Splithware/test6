@@ -1,0 +1,115 @@
+local FillColor = Color3.fromRGB(84, 11, 12)
+local DepthMode = "AlwaysOnTop"
+local FillTransparency = 0.5
+local OutlineColor = Color3.fromRGB(255, 255, 255)
+local OutlineTransparency = 0
+
+local CoreGui = game:FindService("CoreGui")
+local Players = game:FindService("Players")
+local UserInputService = game:FindService("UserInputService")
+local lp = Players.LocalPlayer
+local connections = {}
+local highlightEnabled = true
+
+local Storage = Instance.new("Folder")
+Storage.Parent = CoreGui
+Storage.Name = "Highlight_Storage"
+
+local function CreateHealthBar(plr)
+    local character = plr.Character
+    if character then
+        local head = character:FindFirstChild("Head")
+        if head then
+            local billboardGui = Instance.new("BillboardGui")
+            billboardGui.Name = "HealthBar"
+            billboardGui.Adornee = head
+            billboardGui.Size = UDim2.new(0, 200, 0, 50)
+            billboardGui.StudsOffset = Vector3.new(0, 2, 0)
+            billboardGui.Parent = head
+
+            local background = Instance.new("Frame")
+            background.Size = UDim2.new(1, 0, 0.2, 0)
+            background.Position = UDim2.new(0, 0, 0.5, 0)
+            background.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+            background.Parent = billboardGui
+
+            local healthBar = Instance.new("Frame")
+            healthBar.Size = UDim2.new(plr.Character.Humanoid.Health / plr.Character.Humanoid.MaxHealth, 0, 1, 0)
+            healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+            healthBar.Parent = background
+
+            connections[plr] = plr.Character.Humanoid.HealthChanged:Connect(function(health)
+                healthBar.Size = UDim2.new(health / plr.Character.Humanoid.MaxHealth, 0, 1, 0)
+            end)
+        end
+    end
+end
+
+local function Highlight(plr)
+    local Highlight = Instance.new("Highlight")
+    Highlight.Name = plr.Name
+    Highlight.FillColor = FillColor
+    Highlight.DepthMode = DepthMode
+    Highlight.FillTransparency = FillTransparency
+    Highlight.OutlineColor = OutlineColor
+    Highlight.OutlineTransparency = OutlineTransparency
+    Highlight.Parent = Storage
+    
+    local plrchar = plr.Character
+    if plrchar then
+        Highlight.Adornee = plrchar
+        CreateHealthBar(plr)
+    end
+
+    connections[plr] = plr.CharacterAdded:Connect(function(char)
+        Highlight.Adornee = char
+        CreateHealthBar(plr)
+    end)
+end
+
+local function ToggleHighlights()
+    highlightEnabled = not highlightEnabled
+    if highlightEnabled then
+        for _, plr in pairs(Players:GetPlayers()) do
+            if not Storage:FindFirstChild(plr.Name) then
+                Highlight(plr)
+            end
+        end
+    else
+        for _, highlight in pairs(Storage:GetChildren()) do
+            highlight:Destroy()
+        end
+        for _, connection in pairs(connections) do
+            connection:Disconnect()
+        end
+        connections = {}
+    end
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if input.KeyCode == Enum.KeyCode.K and not gameProcessedEvent then
+        ToggleHighlights()
+    end
+end)
+
+Players.PlayerAdded:Connect(function(plr)
+    if highlightEnabled then
+        Highlight(plr)
+    end
+end)
+
+for i, v in pairs(Players:GetPlayers()) do
+    if highlightEnabled then
+        Highlight(v)
+    end
+end
+
+Players.PlayerRemoving:Connect(function(plr)
+    local plrname = plr.Name
+    if Storage[plrname] then
+        Storage[plrname]:Destroy()
+    end
+    if connections[plr] then
+        connections[plr]:Disconnect()
+    end
+end)
