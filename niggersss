@@ -1,0 +1,339 @@
+if game.PlaceId == 17625359962 then
+    local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+    local Window = OrionLib:MakeWindow({Name = "Splithware", HidePremium = false, IntroEnabled = false, IntroText = "Splithware", SaveConfig = false, ConfigFolder = "SplithwareConfig"})
+    
+    local Main = Window:MakeTab({
+        Name = "Main",
+        Icon = "rbxassetid://0",
+        PremiumOnly = false
+    })
+    
+    
+    
+    local VisualsTab = Window:MakeTab({
+        Name = "Visuals",
+        Icon = "rbxassetid://0",
+        PremiumOnly = false
+    })
+    
+    local FillColor = Color3.fromRGB(255, 255, 255) -- Default color
+    local DepthMode = "AlwaysOnTop"
+    local FillTransparency = 0.4
+    local OutlineColor = Color3.fromRGB(255, 255, 255)
+    local OutlineTransparency = 0
+    
+    local CoreGui = game:FindService("CoreGui")
+    local Players = game:FindService("Players")
+    local UserInputService = game:FindService("UserInputService")
+    local lp = Players.LocalPlayer
+    local connections = {}
+    local highlightEnabled = true
+    
+    local Storage = Instance.new("Folder")
+    Storage.Parent = CoreGui
+    Storage.Name = "Highlight_Storage"
+    
+    local function Highlight(plr)
+        if plr == lp then return end  -- Skip highlight for local player
+        local highlight = Storage:FindFirstChild(plr.Name) or Instance.new("Highlight")
+        highlight.Name = plr.Name
+        highlight.FillColor = FillColor -- Use the selected color
+        highlight.DepthMode = DepthMode
+        highlight.FillTransparency = FillTransparency
+        highlight.OutlineColor = OutlineColor
+        highlight.OutlineTransparency = OutlineTransparency
+        highlight.Parent = Storage
+        
+        local function applyHighlightToCharacter(char)
+            highlight.Adornee = char
+        end
+    
+        local plrchar = plr.Character or plr.CharacterAdded:Wait()
+        applyHighlightToCharacter(plrchar)
+    
+        if connections[plr] then
+            connections[plr]:Disconnect()
+        end
+    
+        connections[plr] = plr.CharacterAdded:Connect(function(char)
+            applyHighlightToCharacter(char)
+        end)
+    end
+    
+    local function ToggleHighlights()
+        highlightEnabled = not highlightEnabled
+        if highlightEnabled then
+            for _, plr in pairs(Players:GetPlayers()) do
+                if not Storage:FindFirstChild(plr.Name) and plr ~= lp then
+                    Highlight(plr)
+                end
+            end
+        else
+            for _, highlight in pairs(Storage:GetChildren()) do
+                highlight:Destroy()
+            end
+            for _, connection in pairs(connections) do
+                connection:Disconnect()
+            end
+            connections = {}
+        end
+    end
+    
+    UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+        if input.KeyCode == Enum.KeyCode.K and not gameProcessedEvent then
+            ToggleHighlights()
+        end
+    end)
+    
+    Players.PlayerAdded:Connect(function(plr)
+        if highlightEnabled and plr ~= lp then
+            Highlight(plr)
+        end
+    end)
+    
+    for _, v in pairs(Players:GetPlayers()) do
+        if highlightEnabled and v ~= lp then
+            Highlight(v)
+        end
+    end
+    
+    Players.PlayerRemoving:Connect(function(plr)
+        local plrname = plr.Name
+        if Storage[plrname] then
+            Storage[plrname]:Destroy()
+        end
+        if connections[plr] then
+            connections[plr]:Disconnect()
+        end
+    end)
+    
+    -- VisualsTab toggles
+    VisualsTab:AddToggle({
+        Name = "PlayerEsp",
+        Default = false,
+        Callback = function(Value)
+            ToggleHighlights()
+        end    
+    })
+    
+    VisualsTab:AddColorpicker({
+        Name = "PlayerEspColor",
+        Default = Color3.fromRGB(255, 0, 0),
+        Callback = function(Value)
+            FillColor = Value -- Update the FillColor when the color picker changes
+            -- Update existing highlights with the new color
+            for _, highlight in pairs(Storage:GetChildren()) do
+                highlight.FillColor = FillColor
+            end
+        end
+    })
+    
+    -----------------------------------------------------------------------------------------------------------------------------------
+
+    local CoreGui = game:FindService("CoreGui")
+    local Players = game:FindService("Players")
+    local connections = {}
+    local healthBars = {}  -- Table to keep track of created health bars
+    local lp = Players.LocalPlayer
+    local healthBarEnabled = false  -- Toggle state for health bars
+    
+    local function CreateHealthBar(plr)
+        if not healthBarEnabled or plr == lp then return end  -- Check toggle state and skip health bar for local player
+    
+        local character = plr.Character or plr.CharacterAdded:Wait()
+        local head = character:WaitForChild("Head")
+        local humanoid = character:WaitForChild("Humanoid")
+    
+        -- Remove old health bar if it exists
+        local oldHealthBar = head:FindFirstChild("HealthBar")
+        if oldHealthBar then
+            oldHealthBar:Destroy()
+        end
+    
+        local billboardGui = Instance.new("BillboardGui")
+        billboardGui.Name = "HealthBar"
+        billboardGui.Adornee = head
+        billboardGui.Size = UDim2.new(7, 0, 0.85, 0)
+        billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+        billboardGui.AlwaysOnTop = true
+        billboardGui.Parent = head
+    
+        local background = Instance.new("Frame")
+        background.Name = "Background"
+        background.Size = UDim2.new(0.985, 0, 0.559, 0)
+        background.Position = UDim2.new(0.5, 0, 0.5, 0)
+        background.AnchorPoint = Vector2.new(0.5, 0.5)
+        background.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        background.BackgroundTransparency = 0.5
+        background.BorderSizePixel = 0
+        background.Parent = billboardGui
+    
+        local healthBar = Instance.new("Frame")
+        healthBar.Name = "HealthBar"
+        healthBar.Size = UDim2.new(humanoid.Health / humanoid.MaxHealth, 0, 1, 0)
+        healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        healthBar.BorderSizePixel = 0
+        healthBar.Parent = background
+    
+        if connections[plr] then
+            connections[plr]:Disconnect()
+        end
+    
+        connections[plr] = humanoid.HealthChanged:Connect(function(health)
+            healthBar.Size = UDim2.new(math.clamp(health / humanoid.MaxHealth, 0, 1), 0, 1, 0)
+        end)
+    
+        -- Track the created health bar
+        healthBars[plr] = healthBars[plr] or {}
+        table.insert(healthBars[plr], billboardGui)
+    end
+    
+    local function RemoveHealthBars()
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= lp then
+                local character = plr.Character
+                if character then
+                    local head = character:FindFirstChild("Head")
+                    if head then
+                        local existingHealthBar = head:FindFirstChild("HealthBar")
+                        if existingHealthBar then
+                            existingHealthBar:Destroy()
+                        end
+                    end
+                end
+                -- Clear the health bars from the tracking table
+                healthBars[plr] = nil
+            end
+        end
+    end
+    
+    local function RefreshHealthBars()
+        while healthBarEnabled do
+            for _, v in pairs(Players:GetPlayers()) do
+                if v ~= lp then
+                    CreateHealthBar(v)
+                end
+            end
+            wait(0.1)
+        end
+    end
+    
+    local function OnCharacterAdded(plr)
+        if plr ~= lp then
+            CreateHealthBar(plr)
+        end
+    end
+    
+    Players.PlayerAdded:Connect(function(plr)
+        if plr ~= lp then
+            plr.CharacterAdded:Connect(function()
+                OnCharacterAdded(plr)
+            end)
+            CreateHealthBar(plr)
+        end
+    end)
+    
+    Players.PlayerRemoving:Connect(function(plr)
+        if connections[plr] then
+            connections[plr]:Disconnect()
+        end
+        -- Remove health bars when player leaves
+        RemoveHealthBars()
+    end)
+    
+    -- Handle existing players in the game
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= lp then
+            plr.CharacterAdded:Connect(function()
+                OnCharacterAdded(plr)
+            end)
+            CreateHealthBar(plr)
+        end
+    end
+    
+    -- Function to toggle health bar visibility
+    local function ToggleHealthBar(value)
+        healthBarEnabled = value
+        if value then
+            RefreshHealthBars()  -- Start refreshing health bars if enabled
+        else
+            RemoveHealthBars()   -- Remove health bars if disabled
+        end
+    end
+    
+    -- Example toggle for health bar (replace with actual UI toggle code)
+    VisualsTab:AddToggle({
+        Name = "HealthBar",
+        Default = false,
+        Callback = function(Value)
+            ToggleHealthBar(Value)
+        end    
+    })
+    
+    
+    VisualsTab:AddToggle({
+        Name = "Name",
+        Default = false,
+        Callback = function(Value)
+            print("hi")
+        end    
+    })
+    
+    
+    
+    
+    
+    
+    
+    local PlayerTab = Window:MakeTab({
+        Name = "Player",
+        Icon = "rbxassetid://0",
+        PremiumOnly = false
+    })
+
+    PlayerTab:AddToggle({
+        Name = "Speed",
+        Default = false,
+        Callback = function(Value)
+            print("hi")
+        end    
+    })
+    PlayerTab:AddSlider({
+        Name = "Speed",
+        Min = 0,
+        Max = 500,
+        Default = 5,
+        Color = Color3.fromRGB(255,255,255),
+        Increment = 1,
+        ValueName = "Speed",
+        Callback = function(Value)
+            print(Value)
+        end    
+    })
+
+    PlayerTab:AddToggle({
+        Name = "Fly",
+        Default = false,
+        Callback = function(Value)
+            print("hi")
+        end    
+    })
+
+    PlayerTab:AddSlider({
+        Name = "Fly",
+        Min = 0,
+        Max = 500,
+        Default = 5,
+        Color = Color3.fromRGB(255,255,255),
+        Increment = 1,
+        ValueName = "Fly",
+        Callback = function(Value)
+            print(Value)
+        end    
+    })
+    
+    
+    
+    
+    end
+    OrionLib:Init()
