@@ -1,0 +1,49 @@
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+getgenv().refusal = {
+    Key = Enum.KeyCode.B,
+    Enabled = false,
+}
+
+local chatFocused = false
+
+UserInputService.TextBoxFocused:Connect(function()
+    chatFocused = true
+end)
+
+UserInputService.TextBoxFocusReleased:Connect(function()
+    chatFocused = false
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if not gameProcessed and not chatFocused and input.KeyCode == getgenv().refusal.Key then
+        getgenv().refusal.Enabled = not getgenv().refusal.Enabled
+
+        local notificationText = getgenv().refusal.Enabled and "on" or "off"
+        game.StarterGui:SetCore("SendNotification", {
+            Title = "SplithwareAnti",
+            Text = notificationText,
+            Duration = 3,
+        })
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if getgenv().refusal.Enabled then
+        local humanoidRootPart = game.Players.LocalPlayer.Character.HumanoidRootPart
+        local originalVelocity = humanoidRootPart.Velocity
+
+        humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.Angles(0, math.rad(0.01), 0)
+
+        local randomVelocity = Vector3.new(
+            math.random(-3000, 3000),
+            math.random(-3000, 3000),
+            math.random(-3000, 3000)
+        )
+
+        humanoidRootPart.Velocity = randomVelocity
+        RunService.RenderStepped:Wait()
+        humanoidRootPart.Velocity = originalVelocity
+    end
+end)
